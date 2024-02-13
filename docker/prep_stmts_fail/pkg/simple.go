@@ -32,6 +32,11 @@ func workerRoutine(conn *sqlx.DB, wg *sync.WaitGroup, ctx context.Context, lock 
 
 	var insertPrep *sqlx.Stmt = nil
 
+    insertPrep, err := conn.Preparex(insertQuery)
+    if err != nil {
+            log.Fatal("failed to prepare statement on worker startup: ", err)
+    }
+
 	var hasSuccessfullCallsAfterDroppingStatements bool = true
 
 	time.Sleep(startAfter)
@@ -49,8 +54,7 @@ func workerRoutine(conn *sqlx.DB, wg *sync.WaitGroup, ctx context.Context, lock 
 					var err error = nil
 					insertPrep, err = conn.Preparex(insertQuery)
 					if err != nil {
-						log.Println("failed to prepare statement")
-						log.Fatal(err)
+						log.Fatal("failed to prepare statement: ", err)
 					}
 				}
 
@@ -75,7 +79,7 @@ func workerRoutine(conn *sqlx.DB, wg *sync.WaitGroup, ctx context.Context, lock 
 				i += 1
 
 			case <-ctx.Done():
-				if hasSuccessfullCallsAfterDroppingStatements {
+				if !hasSuccessfullCallsAfterDroppingStatements {
 					log.Fatalf("%s received `invalid_sql_statement_name` from PG, but later executions of prepared statements were not successfull\n", self)
 				}
 
